@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoptaus</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #c0eaff; /* Light sky color */
+            font-family: 'Arial', sans-serif;
+        }
+
+        #gameArea {
+            position: relative;
+            width: 100vw;
+            height: 200px;
+            background: linear-gradient(to bottom, #87ceeb, #f0e68c); /* Sky to ground gradient */
+            border-top: 2px solid #000;
+            overflow: hidden;
+            display: none;
+            border-radius: 0px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); /* Add some shadow to game area */
+            background-image: url('path_texture.png'), linear-gradient(to bottom, #87ceeb, #f0e68c); /* Adding ground texture */
+            background-repeat: repeat-x;
+            background-position: bottom;
+        }
+
+        #ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            background: #deb887; /* Sandy ground color */
+            box-shadow: inset 0 5px 10px rgba(0, 0, 0, 0.2); /* Inner shadow for depth */
+        }
+
+        #dino {
+            position: absolute;
+            bottom: 0; /* Place dino directly on the ground */
+            left: 20px;
+            width: 40px; /* Reduced width */
+            height: 40px; /* Reduced height */
+            background: #3c3c3c;
+            border-radius: 50px; /* Smaller border radius due to smaller size */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); /* Adjusted shadow to match smaller size */
+            border: 3px solid #4caf50; /* Green border for dino */
+        }
+
+        #cactus {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 30px;
+            background: linear-gradient(to bottom, #228b22, #006400); /* Gradient for cactus */
+            border-radius: 5px;
+            border: 3px solid #006400; /* Dark green border */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Cactus shadow */
+        }
+
+        @keyframes jumpAnimation {
+            0% { bottom: 0; }
+            50% { bottom: 130px; } /* Higher jump with consistent ground distance */
+            100% { bottom: 0; }
+        }
+
+        .jump {
+            animation: jumpAnimation 0.7s ease-out forwards;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0; }
+        }
+
+        .blink {
+            animation: blink 0.5s linear 2;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            color: #333;
+            background: rgba(255, 255, 255, 0.7); /* Translucent background */
+            padding: 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+        }
+
+        #menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #6cffff, #1e90ff);
+            flex-direction: column;
+            text-align: center;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #menu h1 {
+            margin-bottom: 20px;
+            font-size: 48px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        #menu button {
+            padding: 15px 30px;
+            font-size: 24px;
+            cursor: pointer;
+            background-color: #ffffff;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            margin: 10px; /* Added margin for spacing between buttons */
+        }
+
+        #menu button:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-5px);
+        }
+
+        #infoModal, #levelModal, #startGameModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #1e8fffe0; /* Solid blue background */
+            color: #fff;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: 'Arial', sans-serif;
+            padding: 20px; /* Add padding to ensure text isn't too close to the border */
+            box-sizing: border-box; /* Include padding in the width and height calculation */
+        }
+
+        #infoModal div, #levelModal div, #startGameModal div {
+            font-size: 15px; /* Smaller font size */
+            margin-bottom: 20px; /* Add spacing below the text */
+            max-width: 80%; /* Limit the width to avoid text spanning too wide */
+            line-height: 1.5; /* Improve readability */
+        }
+
+        #infoModal button, #levelModal button, #startGameModal button {
+            padding: 10px 20px;
+            font-size: 20px; /* Slightly smaller font size for the button */
+            cursor: pointer;
+            background-color: #ffffff;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        #infoModal button:hover, #levelModal button:hover, #startGameModal button:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-5px);
+        }
+
+        #gameOverModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #313131d2; /* Solid background color (e.g., blue) */
+            color: #fff;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #gameOverModal div {
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        #gameOverModal button {
+            padding: 10px 20px;
+            font-size: 24px;
+            cursor: pointer;
+            background-color: #ffffff;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        #gameOverModal button:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-5px);
+        }
+        #creditsModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #1e8fffe8;
+            color: #fff;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #creditsModal div {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #creditsModal button {
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #ffffff;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        #creditsModal button:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-5px);
+        }
+ 
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <h1>Hoptaus</h1>
+        <button id="startButton">Start Game</button>
+        <button id="infoButton">Info</button>
+        
+        <h6>You will get 1 extra bonus point.</h6>
+    </div>
+    <div id="gameArea">
+        <div id="dino"></div>
+        <div id="cactus"></div>
+        <div id="score">Score: 0</div>
+    </div>
+    <div id="gameOverModal">
+        <div id="gameOverText"></div>
+        <button id="restartButton">Restart Game</button>
+        <button id="menuButton">Menu</button>
+    </div>
+    <div id="infoModal">
+        <div>Welcome to Hoptaus! In this game, you control a dino that jumps over obstacles. The goal is to score as many points as possible by avoiding cacti. Press the spacebar or tap the screen to jump. The game speeds up as you score more points, so stay sharp! Good luck!</div>
+      <button id="creditsButton">Credits</button>
+        <button id="closeInfoButton">Close</button>
+    </div>
+    <div id="levelModal">
+        <div>Select a Level:</div>
+        <button id="level1Button">Level 1</button>
+        <button id="level2Button">Level 2</button>
+        <button id="closeLevelButton">Close</button>
+    </div>
+    <div id="startGameModal">
+        <div>Ready to start? Click the button below to begin the game.</div>
+        <button id="startGameButton">Start Game</button>
+        <button id="closeStartGameButton">Close</button>
+    </div>
+  <div id="creditsModal">
+        <div><pre><h6> Design: Arka J.D.R.O
+Game Creator: Arka J.D.R.O
+Game Programmer: Arka J.D.R.O
+Level Creator: Sahil Shina
+Color Design: Aritra Das</h6></Design:></pre style="font-size: 15px;"></div>
+        <button id="closeCreditsButton">Close</button>
+    </div>
+    <script>const dino = document.getElementById('dino');
+const cactus = document.getElementById('cactus');
+const gameArea = document.getElementById('gameArea');
+const startButton = document.getElementById('startButton');
+const infoButton = document.getElementById('infoButton');
+const levelButton = document.getElementById('levelButton');
+const gameOverModal = document.getElementById('gameOverModal');
+const infoModal = document.getElementById('infoModal');
+const levelModal = document.getElementById('levelModal');
+const creditsModal = document.getElementById('creditsModal');
+const gameOverText = document.getElementById('gameOverText');
+const restartButton = document.getElementById('restartButton');
+const menuButton = document.getElementById('menuButton');
+const closeInfoButton = document.getElementById('closeInfoButton');
+const creditsButton = document.getElementById('creditsButton');
+const closeCreditsButton = document.getElementById('closeCreditsButton');
+const closeLevelButton = document.getElementById('closeLevelButton');
+const level1Button = document.getElementById('level1Button');
+const level2Button = document.getElementById('level2Button');
+const scoreElement = document.getElementById('score');
+const startGameButton = document.getElementById('startGameButton');
+const closeStartGameButton = document.getElementById('closeStartGameButton');
+
+let isJumping = false;
+let isGameOver = false;
+let score = 0;
+let cactusPos;
+let cactusSpeed = 6;
+let gameStarted = false; 
+let gameLevel = null;
+
+function jump() {
+    if (!gameStarted || isJumping || isGameOver) return;
+    isJumping = true;
+    dino.classList.add('jump');
+    setTimeout(() => {
+        dino.classList.remove('jump');
+        isJumping = false;
+    }, 700);
+}
+
+function updateScore() {
+    score++;
+    scoreElement.textContent = `Score: ${score}`;
+    if (score % 5 === 0) {
+        scoreElement.classList.add('blink');
+        setTimeout(() => {
+            scoreElement.classList.remove('blink');
+        }, 1000);
+    }
+    if (gameLevel === 2 && score % 10 === 0) {
+        cactusSpeed *= 1.05;
+    }
+}
+
+function randomizeCactusSize() {
+    const minHeight = 30;
+    const maxHeight = 60;
+    const randomHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+    cactus.style.height = `${randomHeight}px`;
+}
+
+function startGame() {
+    if (gameLevel === null) {
+        showLevelModal();
+        return;
+    }
+    isGameOver = false;
+    isJumping = false;
+    score = 0;
+    cactusPos = gameArea.clientWidth;
+    cactusSpeed = gameLevel === 1 ? 6 : 6;
+    gameStarted = false;
+    document.getElementById('menu').style.display = 'none';
+    gameOverModal.style.display = 'none';
+    gameArea.style.display = 'block';
+    scoreElement.textContent = `Score: ${score}`;
+    cactus.style.right = `${gameArea.clientWidth - cactusPos}px`;
+    randomizeCactusSize();
+    setTimeout(() => {
+        gameStarted = true;
+        animateCactus();
+    }, 300);
+}
+
+function animateCactus() {
+    if (isGameOver) return;
+    cactusPos -= cactusSpeed;
+    cactus.style.right = `${gameArea.clientWidth - cactusPos}px`;
+    if (cactusPos < -cactus.clientWidth) {
+        cactusPos = gameArea.clientWidth;
+        randomizeCactusSize();
+        updateScore();
+    }
+    checkCollision();
+    requestAnimationFrame(animateCactus);
+}
+
+function checkCollision() {
+    if (isGameOver) return;
+    const dinoRect = dino.getBoundingClientRect();
+    const cactusRect = cactus.getBoundingClientRect();
+    if (
+        dinoRect.bottom > cactusRect.top &&
+        dinoRect.right >= cactusRect.left &&
+        dinoRect.left <= cactusRect.right &&
+        dinoRect.top < cactusRect.bottom
+    ) {
+        endGame();
+    }
+}
+
+function endGame() {
+    isGameOver = true;
+    gameStarted = false;
+    gameArea.style.display = 'none';
+    gameOverText.textContent = `Game Over! Your Score: ${score}`;
+    gameOverModal.style.display = 'flex';
+    if (navigator.vibrate) {
+        navigator.vibrate(500);
+    } else {
+        console.log("Vibration not supported on this device.");
+    }
+}
+
+function restartGame() {
+    isGameOver = false;
+    isJumping = false;
+    score = 0;
+    cactusPos = gameArea.clientWidth;
+    cactusSpeed = gameLevel === 1 ? 6 : 6;
+    scoreElement.textContent = `Score: ${score}`;
+    gameStarted = false;
+    gameOverModal.style.display = 'none';
+    gameArea.style.display = 'block';
+    setTimeout(() => {
+        gameStarted = true;
+        animateCactus();
+    }, 300);
+}
+
+function showInfo() {
+    infoModal.style.display = 'flex';
+}
+
+function closeInfo() {
+    infoModal.style.display = 'none';
+}
+
+function showLevelModal() {
+    levelModal.style.display = 'flex';
+}
+
+function closeLevelModal() {
+    levelModal.style.display = 'none';
+}
+
+function showStartGameModal() {
+    startGameModal.style.display = 'flex';
+}
+
+function closeStartGameModal() {
+    startGameModal.style.display = 'none';
+}
+
+function setLevel(level) {
+    gameLevel = level;
+    closeLevelModal();
+    showStartGameModal();
+}
+
+function goToMenu() {
+    gameStarted = false;
+    gameLevel = null;
+    document.getElementById('menu').style.display = 'flex';
+    gameOverModal.style.display = 'none';
+}
+
+infoButton.addEventListener('click', showInfo);
+closeInfoButton.addEventListener('click', closeInfo);
+creditsButton.addEventListener('click', () => {
+    creditsModal.style.display = 'flex';
+});
+closeCreditsButton.addEventListener('click', () => {
+    creditsModal.style.display = 'none';
+});
+startButton.addEventListener('click', () => {
+    gameStarted = false;
+    showLevelModal();
+});
+level1Button.addEventListener('click', () => setLevel(1));
+level2Button.addEventListener('click', () => setLevel(2));
+closeLevelButton.addEventListener('click', closeLevelModal);
+startGameButton.addEventListener('click', () => {
+    closeStartGameModal();
+    startGame();
+});
+closeStartGameButton.addEventListener('click', closeStartGameModal);
+restartButton.addEventListener('click', restartGame);
+menuButton.addEventListener('click', goToMenu);
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') jump();
+});
+document.addEventListener('touchstart', jump);
+
+
+        
+        </script>
+</body>
+</html>
